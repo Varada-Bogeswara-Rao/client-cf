@@ -5,6 +5,7 @@ import "./globals.css";
 
 import { ThirdwebProvider } from "thirdweb/react";
 import NavBar from "./components/NavBar";
+import { ThemeProvider } from "next-themes";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,11 +20,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <ThirdwebProvider>
-          <NavBar /> {/* ✅ reusable navbar */}
-          <main>{children}</main>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <NavBar /> {/* ✅ reusable navbar */}
+            <main>{children}</main>
+          </ThemeProvider>
         </ThirdwebProvider>
       </body>
     </html>

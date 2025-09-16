@@ -1,11 +1,11 @@
 "use client";
-
+import { Crown } from 'lucide-react';
 import Link from "next/link";
 import { ConnectButton } from "thirdweb/react";
 import { client } from "../client";
 // In some other file
-import { ThemeToggleButton } from "./UI/ThemeSwitch";
-
+import { ThemeProvider } from "next-themes";
+import { ThemeToggleButton3 } from "./UI/toggle";
 
 export default function NavBar() {
     return (
@@ -13,18 +13,17 @@ export default function NavBar() {
             {/* Left side: Logo / Links */}
             <div className="flex items-center gap-6">
                 <Link href="/" className="text-xl font-bold">
-                    CrowdFunding
+                    <div className='flex items-center gap-3 '><Crown />  CROF </div>
                 </Link>
-                {/* <Link href="/about" className="hover:text-blue-600">
-                    About
+                <Link href="/create" className="hover:text-blue-600">
+                    Create Campaign
                 </Link>
-                <Link href="/dashboard" className="hover:text-blue-600">
-                    Dashboard
-                </Link> */}
+
             </div>
-            <ThemeToggleButton />
+
             {/* Right side: Wallet Button */}
-            <div>
+            <div className="flex items-center gap-3">
+                <ThemeToggleButton3 className="size-9" />
                 <ConnectButton client={client} />
             </div>
         </nav>
