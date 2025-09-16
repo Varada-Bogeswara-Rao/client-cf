@@ -8,6 +8,8 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "
 import { Input } from "./UI/input"
 import { Button } from "./UI/button"
 import { Textarea } from "./UI/textarea";
+import { HoverBorderGradient } from "./UI/hover-border-gradient";
+
 
 // ZOD schema
 
@@ -105,7 +107,7 @@ export default function CreateForm() {
                   step={0.01}
                 />
               </FormControl>
-              <FormMessage />
+              <FormMessage className="text-sm text-red-500 min-h-[1.25rem]" />
             </FormItem>
           )}
         />
@@ -125,7 +127,7 @@ export default function CreateForm() {
                   step={1}
                 />
               </FormControl>
-              <FormMessage />
+              <FormMessage className="text-sm text-red-500 min-h-[1.25rem]" />
             </FormItem>
           )}
         />
@@ -146,10 +148,18 @@ export default function CreateForm() {
             </FormItem>
           )}
         />
+        <HoverBorderGradient >
+          <button
+            type="submit"
+            className="px-6 py-2 bg-black text-white rounded-lg"
+          >
+            Create Campaign
+          </button>
+        </HoverBorderGradient>
 
 
-        <Button type="submit">Create Campaign</Button>
+
       </form>
-    </Form>
+    </Form >
   )
 }
