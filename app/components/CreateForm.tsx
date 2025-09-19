@@ -9,6 +9,10 @@ import { Input } from "./UI/input"
 import { Button } from "./UI/button"
 import { Textarea } from "./UI/textarea";
 import { HoverBorderGradient } from "./UI/hover-border-gradient";
+import { title } from "process";
+import { uploadCampaignMetadata } from "@/lib/uploadCampaign";
+import { toast } from "sonner";
+
 
 
 // ZOD schema
@@ -38,10 +42,34 @@ export default function CreateForm() {
     mode: "onSubmit",        // only validate on submit
     reValidateMode: "onChange" // revalidate after a failed submit
   })
-  const onSubmit = (values: createCampaignFormValues) => {
-    console.log("Form submitted:", values)
-    // TODO: Send values to backend or blockchain
-  }
+  const onSubmit = async (values: createCampaignFormValues) => {
+    try {
+      const metadata = {
+        name: values.name,
+        title: values.title,
+        description: values.description,
+        image: values.image,
+        createdAt: new Date().toISOString(),
+      };
+
+      const metadataURI = await uploadCampaignMetadata(metadata);
+      toast.success("Campaign metadata uploaded!", {
+        description: metadataURI,
+      });
+      const deadline = Math.floor(Date.now() / 1000) + values.duration * 86400;
+
+      console.log("Ready to send tx with:", {
+        metadataURI,
+        goal: values.goal,
+        deadline,
+      });
+      // TODO: call smart contract with goal, deadline, metadataURI
+    } catch (error: any) {
+      toast.error("Failed to create campaign", {
+        description: error.message ?? "Unknown error",
+      });
+    }
+  };
   return (
 
     <Form {...form}>
@@ -148,14 +176,14 @@ export default function CreateForm() {
             </FormItem>
           )}
         />
-        <HoverBorderGradient >
-          <button
-            type="submit"
-            className="px-6 py-2 bg-black text-white rounded-lg"
-          >
-            Create Campaign
-          </button>
-        </HoverBorderGradient>
+
+        <button
+          type="submit"
+          className="px-4 py-1 bg-black text-white rounded-lg"
+        >
+          Create Campaign
+        </button>
+
 
 
 

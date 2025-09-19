@@ -23,7 +23,7 @@ export default function NavBar() {
 
             {/* Right side: Wallet Button */}
             <div className="flex items-center gap-3">
-                <ThemeToggleButton3 className="size-9" />
+                {/* <ThemeToggleButton3 className="size-9" /> */}
                 <ConnectButton client={client} />
             </div>
         </nav>
