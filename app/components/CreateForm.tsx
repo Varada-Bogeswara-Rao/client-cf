@@ -1,35 +1,42 @@
 "use client";
 
-import * as React from "react"
-import { useForm } from "react-hook-form"
+import * as React from "react";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod"
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "./UI/form"
-import { Input } from "./UI/input"
-import { Button } from "./UI/button"
+import * as z from "zod";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "./UI/form";
+import { Input } from "./UI/input";
+import { Button } from "./UI/button";
 import { Textarea } from "./UI/textarea";
-import { HoverBorderGradient } from "./UI/hover-border-gradient";
-import { title } from "process";
-import { uploadCampaignMetadata } from "@/lib/uploadCampaign";
 import { toast } from "sonner";
+import { sendTransaction, prepareContractCall } from "thirdweb";
+import { crowdfundContract } from "@/lib/contract";
+import { useActiveAccount } from "thirdweb/react";
+import { uploadCampaignMetadata } from "@/lib/uploadCampaign";
 
-
-
-// ZOD schema
-
+// Zod validation schema
 const createCampaignSchema = z.object({
-  name: z.string().min(1, "name is required "),
-  title: z.string().min(5, "title must be atleast 5 characters"),
-  description: z.string().min(10, "Description must be atleast 10 characters"),
+  name: z.string().min(1, "Name is required"),
+  title: z.string().min(5, "Title must be at least 5 characters"),
+  description: z.string().min(10, "Description must be at least 10 characters"),
   goal: z.coerce.number().positive("Goal must be positive"),
   duration: z.coerce.number().positive("Duration must be positive"),
-  image: z.string().url("Must be a valid image URL").min(1, "Image is required")
-  ,
-})
-type createCampaignFormValues = z.infer<typeof createCampaignSchema>;
+  image: z.string().url("Must be a valid image URL").min(1, "Image is required"),
+});
+
+type CreateCampaignFormValues = z.infer<typeof createCampaignSchema>;
 
 export default function CreateForm() {
-  const form = useForm<createCampaignFormValues>({
+  const account = useActiveAccount();
+
+  const form = useForm<CreateCampaignFormValues>({
     resolver: zodResolver(createCampaignSchema),
     defaultValues: {
       name: "",
@@ -37,13 +44,20 @@ export default function CreateForm() {
       description: "",
       goal: undefined,
       duration: undefined,
-      image: ""
+      image: "",
     },
-    mode: "onSubmit",        // only validate on submit
-    reValidateMode: "onChange" // revalidate after a failed submit
-  })
-  const onSubmit = async (values: createCampaignFormValues) => {
+    mode: "onSubmit",
+    reValidateMode: "onChange",
+  });
+
+  const onSubmit = async (values: CreateCampaignFormValues) => {
+    if (!account) {
+      toast.error("Please connect your wallet first");
+      return;
+    }
+
     try {
+      // Upload metadata
       const metadata = {
         name: values.name,
         title: values.title,
@@ -53,27 +67,42 @@ export default function CreateForm() {
       };
 
       const metadataURI = await uploadCampaignMetadata(metadata);
-      toast.success("Campaign metadata uploaded!", {
-        description: metadataURI,
-      });
-      const deadline = Math.floor(Date.now() / 1000) + values.duration * 86400;
+      toast.success("Campaign metadata uploaded!", { description: metadataURI });
 
-      console.log("Ready to send tx with:", {
-        metadataURI,
-        goal: values.goal,
-        deadline,
+      // Convert duration to seconds
+      const durationSeconds = BigInt(values.duration * 86400);
+
+      // Convert goal in ETH to wei
+      const goalInWei = BigInt(Math.floor(values.goal * 1e18));
+
+      console.log("Ready to send tx:", { metadataURI, goalInWei, durationSeconds });
+
+      // Prepare contract call
+      const tx = prepareContractCall({
+        contract: crowdfundContract,
+        method: `function createCampaign(string,uint256,uint256)`,
+        params: [metadataURI, goalInWei, durationSeconds],
       });
-      // TODO: call smart contract with goal, deadline, metadataURI
+
+      // Send transaction
+      const { transactionHash } = await sendTransaction({
+        transaction: tx,
+        account,
+      });
+
+      toast.success("Campaign created successfully!", { description: `Tx hash: ${transactionHash}` });
     } catch (error: any) {
-      toast.error("Failed to create campaign", {
-        description: error.message ?? "Unknown error",
-      });
+      toast.error("Failed to create campaign", { description: error.message ?? "Unknown error" });
+      console.error(error);
     }
   };
-  return (
 
+  return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 p-6 border border-gray-700 rounded-xl bg-black/40">
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="space-y-6 p-6 border border-gray-700 rounded-xl bg-black/40"
+      >
         {/* Name */}
         <FormField
           control={form.control}
@@ -127,19 +156,14 @@ export default function CreateForm() {
             <FormItem>
               <FormLabel>Goal (in ETH)</FormLabel>
               <FormControl>
-                <Input
-                  {...field}
-                  type="number"
-                  placeholder="Enter campaign goal"
-                  min={0}
-                  step={0.01}
-                />
+                <Input {...field} type="number" placeholder="Enter campaign goal" min={0} step={0.01} />
               </FormControl>
-              <FormMessage className="text-sm text-red-500 min-h-[1.25rem]" />
+              <FormMessage />
             </FormItem>
           )}
         />
-        {/* Duration*/}
+
+        {/* Duration */}
         <FormField
           control={form.control}
           name="duration"
@@ -147,18 +171,14 @@ export default function CreateForm() {
             <FormItem>
               <FormLabel>Duration (in Days)</FormLabel>
               <FormControl>
-                <Input
-                  {...field}
-                  type="number"
-                  placeholder="Enter campaign duration in Day's"
-                  min={1}
-                  step={1}
-                />
+                <Input {...field} type="number" placeholder="Enter duration in days" min={1} step={1} />
               </FormControl>
-              <FormMessage className="text-sm text-red-500 min-h-[1.25rem]" />
+              <FormMessage />
             </FormItem>
           )}
         />
+
+        {/* Image */}
         <FormField
           control={form.control}
           name="image"
@@ -166,11 +186,7 @@ export default function CreateForm() {
             <FormItem>
               <FormLabel>Campaign Image</FormLabel>
               <FormControl>
-                <Input
-                  {...field}
-                  placeholder="https://..."
-                  type="url"
-                />
+                <Input {...field} placeholder="https://..." type="url" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -179,15 +195,11 @@ export default function CreateForm() {
 
         <button
           type="submit"
-          className="px-4 py-1 bg-black text-white rounded-lg"
+          className="px-4 py-2 bg-black text-white rounded-lg"
         >
           Create Campaign
         </button>
-
-
-
-
       </form>
-    </Form >
-  )
+    </Form>
+  );
 }
