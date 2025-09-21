@@ -18,6 +18,9 @@ export default function NavBar() {
                 <Link href="/create" className="hover:text-blue-600">
                     Create Campaign
                 </Link>
+                <Link href="/campaigns" className="hover:text-blue-600">
+                    Campaigns
+                </Link>
 
             </div>
 
