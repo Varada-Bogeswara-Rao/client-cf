@@ -13,10 +13,9 @@ import {
   FormMessage,
 } from "./UI/form";
 import { Input } from "./UI/input";
-import { Button } from "./UI/button";
 import { Textarea } from "./UI/textarea";
 import { toast } from "sonner";
-import { sendTransaction, prepareContractCall } from "thirdweb";
+import { sendTransaction, prepareContractCall, } from "thirdweb";
 import { crowdfundContract } from "@/lib/contract";
 import { useActiveAccount } from "thirdweb/react";
 import { uploadCampaignMetadata } from "@/lib/uploadCampaign";
@@ -52,6 +51,7 @@ export default function CreateForm() {
 
   const onSubmit = async (values: CreateCampaignFormValues) => {
     if (!account) {
+      console.log("Wallet not connected, toast should appear.");
       toast.error("Please connect your wallet first");
       return;
     }
@@ -67,12 +67,13 @@ export default function CreateForm() {
       };
 
       const metadataURI = await uploadCampaignMetadata(metadata);
-      toast.success("Campaign metadata uploaded!", { description: metadataURI });
 
-      // Convert duration to seconds
+      toast.success("Campaign metadata uploaded!", {
+        description: metadataURI,
+      });
+
+      // Convert duration to seconds and goal to wei
       const durationSeconds = BigInt(values.duration * 86400);
-
-      // Convert goal in ETH to wei
       const goalInWei = BigInt(Math.floor(values.goal * 1e18));
 
       console.log("Ready to send tx:", { metadataURI, goalInWei, durationSeconds });
@@ -90,10 +91,30 @@ export default function CreateForm() {
         account,
       });
 
-      toast.success("Campaign created successfully!", { description: `Tx hash: ${transactionHash}` });
+      toast("Transaction submitted!", {
+        description: `Tx hash: ${transactionHash}`,
+      });
+
+      // Wait for confirmation
+      // const receipt = await crowdfundContract.contractWrapper.readContract.provider.waitForTransaction(transactionHash);
+      // need to ad reciept to get the blocknumber(reciept.blocknumber)
+
+      toast.success("Campaign created successfully!", {
+        description: ` Tx: ${transactionHash}`,
+      });
     } catch (error: any) {
-      toast.error("Failed to create campaign", { description: error.message ?? "Unknown error" });
-      console.error(error);
+      if (error.name === "UserRejectedRequestError") {
+        toast.error("Transaction cancelled by user.");
+      } else if (error.message) {
+        toast.error("Failed to create campaign", {
+          description: error.message,
+        });
+      } else {
+        toast.error("Failed to create campaign", {
+          description: "Unknown error",
+        });
+      }
+      console.error(error); // Always log the full error for debugging
     }
   };
 
@@ -102,6 +123,7 @@ export default function CreateForm() {
       <form
         onSubmit={form.handleSubmit(onSubmit)}
         className="space-y-6 p-6 border border-gray-700 rounded-xl bg-black/40"
+        suppressHydrationWarning
       >
         {/* Name */}
         <FormField
@@ -196,6 +218,7 @@ export default function CreateForm() {
         <button
           type="submit"
           className="px-4 py-2 bg-black text-white rounded-lg"
+          suppressHydrationWarning
         >
           Create Campaign
         </button>

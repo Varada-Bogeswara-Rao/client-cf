@@ -1,6 +1,6 @@
-import { createThirdwebClient , getContract } from "thirdweb";
- 
-const client=createThirdwebClient({
+import { createThirdwebClient, getContract } from "thirdweb";
+
+const client = createThirdwebClient({
     clientId: process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID!,
 });
 
@@ -9,11 +9,11 @@ const client=createThirdwebClient({
 
 export const crowdfundContract = getContract({
     client,
-    chain:{
-        id:31337,  
+    chain: {
+        id: 31337,
         rpc: "http://127.0.0.1:8545",
     },
-    address:"0x5FbDB2315678afecb367f032d93F642f64180aa3",
+    address: "0x8464135c8F25Da09e49BC8782676a84730C318bC",
 });
 
 
