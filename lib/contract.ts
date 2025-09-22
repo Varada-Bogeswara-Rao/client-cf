@@ -13,7 +13,7 @@ export const crowdfundContract = getContract({
         id: 31337,
         rpc: "http://127.0.0.1:8545",
     },
-    address: "0x8464135c8F25Da09e49BC8782676a84730C318bC",
+    address: "0x700b6A60ce7EaaEA56F065753d8dcB9653dbAD35",
 });
 
 

@@ -6,21 +6,10 @@ import { readContract } from "thirdweb";
 import { formatEther } from "viem";
 import { resolveIpfs } from "@/lib/utils";
 import { toast } from "sonner";
+import ExpandableCardDemo from "./UI/expandable-card-demo-grid";
+import { Campaign } from "@/app/types";
 
-type Campaign = {
-    id: number;
-    owner: string;
-    goal: string;
-    pledged: string;
-    deadline: number;
-    withdrawn: boolean;
-    metadata: {
-        name?: string;
-        title?: string;
-        description?: string;
-        image?: string;
-    };
-};
+
 
 export default function OngoingCampaigns() {
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -50,9 +39,10 @@ export default function OngoingCampaigns() {
                     // Resolve IPFS URI
                     let metadata: any = {};
                     try {
+                        const metadataUrl = resolveIpfs(metadataURI);
                         if (metadataURI) {
                             // If it's a proper URL, just fetch directly
-                            const res = await fetch(metadataURI);
+                            const res = await fetch(metadataUrl);
 
                             if (!res.ok) {
                                 throw new Error(`HTTP error ${res.status}`);
@@ -83,9 +73,15 @@ export default function OngoingCampaigns() {
                             pledged: formatEther(pledged),
                             deadline: Number(deadline),
                             withdrawn,
-                            metadata,
+                            title: metadata?.title || `Campaign #${i}`,
+                            description: metadata?.description || "",
+                            image: metadata?.image ? resolveIpfs(metadata.image) : "",
+                            metadata
                         });
+
                     }
+
+
                 }
 
                 setCampaigns(all);
@@ -103,8 +99,10 @@ export default function OngoingCampaigns() {
     if (campaigns.length === 0) return <p>No ongoing campaigns</p>;
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {campaigns.map((c) => (
+
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
+            <ExpandableCardDemo campaigns={campaigns} />
+            {/* {campaigns.map((c) => (
                 <div key={c.id} className="border p-4 rounded-lg shadow bg-white/10">
                     {c.metadata.image && (
                         <img src={c.metadata.image} alt={c.metadata.title} className="rounded-lg mb-3" />
@@ -116,8 +114,9 @@ export default function OngoingCampaigns() {
                     <p className="text-xs text-gray-500">
                         Deadline: {new Date(c.deadline * 1000).toLocaleString()}
                     </p>
+                  
                 </div>
-            ))}
+            ))} */}
         </div>
     );
 }

@@ -67,6 +67,7 @@ export default function CreateForm() {
       };
 
       const metadataURI = await uploadCampaignMetadata(metadata);
+      console.log(metadataURI);
 
       toast.success("Campaign metadata uploaded!", {
         description: metadataURI,

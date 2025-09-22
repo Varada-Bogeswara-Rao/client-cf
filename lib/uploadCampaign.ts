@@ -13,9 +13,9 @@ export async function uploadCampaignMetadata(data: any) {
         });
 
         toast.success("Metadata uploaded to IPFS!", {
-            description: uris[0], // show the IPFS URI in the toast
+            description: uris, // show the IPFS URI in the toast
         });
-        return uris[0];
+        return uris;
     } catch (error: any) {
         toast.error("Failed to upload metadata", {
             description: error.message ?? "Unknown error",
