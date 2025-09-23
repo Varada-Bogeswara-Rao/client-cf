@@ -8,9 +8,11 @@ import { resolveIpfs } from "@/lib/utils";
 import { ProgressBar } from "./progress-bar";
 import { toast } from "sonner";
 import { createWalletClient, http } from "viem";
-
 import { parseEther } from "viem/utils";
 import { getWalletClient, crowdfundAbi, crowdfundContract, anvilChain } from "@/lib/contract";
+import { WithdrawButton } from "../withdraw";
+import { useActiveAccount } from "thirdweb/react";
+
 
 type Props = {
   campaigns: Campaign[];
@@ -23,6 +25,7 @@ export default function ExpandableCardDemo({ campaigns }: Props) {
   const id = useId();
   const ref = useRef<HTMLDivElement>(null);
 
+  const account = useActiveAccount()?.address;
 
   const anvilChain = {
     id: 31337,
@@ -169,6 +172,9 @@ export default function ExpandableCardDemo({ campaigns }: Props) {
                     Donate
                   </button>
                 </div>
+                {account === active?.owner && (
+                  <WithdrawButton campaignId={BigInt(active.id)} />
+                )}
               </div>
             </motion.div>
           </div>
