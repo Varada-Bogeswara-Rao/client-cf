@@ -11,6 +11,7 @@ import { Campaign } from "@/app/types";
 
 
 
+
 export default function OngoingCampaigns() {
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
     const [loading, setLoading] = useState(true);
@@ -94,6 +95,13 @@ export default function OngoingCampaigns() {
 
         fetchCampaigns();
     }, []);
+    // const hoverItems: { title: string; description: string; link: string }[] =
+    //     campaigns.map((c) => ({
+    //         title: c.title ?? `Campaign #${c.id}`,
+    //         description: c.description ?? "",
+    //         link: `/campaign/${c.id}`,
+    //     }));
+
 
     if (loading) return <p>Loading campaigns...</p>;
     if (campaigns.length === 0) return <p>No ongoing campaigns</p>;
@@ -102,6 +110,7 @@ export default function OngoingCampaigns() {
 
         <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
             <ExpandableCardDemo campaigns={campaigns} />
+            {/* <HoverEffect items={hoverItems} /> */}
             {/* {campaigns.map((c) => (
                 <div key={c.id} className="border p-4 rounded-lg shadow bg-white/10">
                     {c.metadata.image && (
