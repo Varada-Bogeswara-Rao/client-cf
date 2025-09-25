@@ -2,9 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ethers } from "ethers";
-import crowdfundAbi from "@/lib/SimpleCrowdfund.abi.json";
+import { ethers, Contract, ContractInterface } from "ethers";
+import crowdfundAbiJson from "@/lib/crowdfundABI.json";
+import { resolveIpfs } from "@/lib/utils";
 
+// 1. Define an interface for the full artifact if you want safety
+interface ContractArtifact {
+    abi: ContractInterface; // The ABI is the ContractInterface
+    [key: string]: any; // Allows for other fields like bytecode, etc.
+}
+// 2. Cast the import to the full artifact type
+const artifact = crowdfundAbiJson as ContractArtifact;
+
+// 3. Extract ONLY the 'abi' property
+const crowdfundAbi: ContractInterface = artifact.abi;
 
 // Replace with your deployed contract address & RPC URL
 const CONTRACT_ADDRESS = "0xC6bA8C3233eCF65B761049ef63466945c362EdD2";
@@ -24,26 +35,30 @@ interface Campaign {
 
 export default function CampaignPage() {
     const params = useParams();
+    const ID = Array.isArray(params.ID) ? params.ID[0] : params.ID;
 
     const [campaign, setCampaign] = useState<Campaign | null>(null);
     const [loading, setLoading] = useState(true);
-    const ID = Array.isArray(params.ID) ? params.ID[0] : params.ID;
-
 
     useEffect(() => {
         const fetchCampaign = async () => {
             if (!ID) return;
+
             try {
                 const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
-                const contract = new ethers.Contract(CONTRACT_ADDRESS, crowdfundAbi, provider);
 
-                // Call getCampaign from your updated ABI
+                // Connect to contract with provider
+                const contract = new Contract(CONTRACT_ADDRESS, crowdfundAbi, provider);
 
-
+                // Call the getCampaign function from your updated contract
                 const c = await contract.getCampaign(BigInt(ID));
 
-                // Fetch metadata JSON
-                const metadataRes = await fetch(c.metadataURI);
+                // Fetch metadata from URI
+                const metadataUrl = resolveIpfs(c.metadataURI);
+                console.log(c.metadataURI);
+                console.log(metadataUrl);
+                const metadataRes = await fetch(metadataUrl);
+                console.log(metadataRes);
                 const metadata = await metadataRes.json();
 
                 setCampaign({
@@ -75,7 +90,11 @@ export default function CampaignPage() {
         <div className="p-4 max-w-xl mx-auto border rounded shadow">
             <h1 className="text-2xl font-bold">{campaign.title}</h1>
             {campaign.image && (
-                <img src={campaign.image} alt={campaign.title} className="my-2 rounded" />
+                <img
+                    src={campaign.image}
+                    alt={campaign.title}
+                    className="my-2 rounded"
+                />
             )}
             <p>{campaign.description}</p>
             <p>
