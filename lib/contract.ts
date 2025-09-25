@@ -30,10 +30,12 @@ export const anvilChain = defineChain({
 // ✅ Export contract instance for read-only calls
 export const crowdfundContract = getContract({
   client,
-  chain: {id: 31337,
+  chain: {
+    id: 31337,
     name: "Anvil Local",
-    rpc: "http://127.0.0.1:8545",}, // you can change to Sepolia/Goerli later
-  address: "0x700b6A60ce7EaaEA56F065753d8dcB9653dbAD35",
+    rpc: "http://127.0.0.1:8545",
+  }, // you can change to Sepolia/Goerli later
+  address: "0xC6bA8C3233eCF65B761049ef63466945c362EdD2",
   abi: crowdfundAbi,
 });
 
