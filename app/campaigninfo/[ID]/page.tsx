@@ -2,25 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ethers, Contract, ContractInterface } from "ethers";
-import crowdfundAbiJson from "@/lib/crowdfundABI.json";
+import { createWalletClient, type Abi, http } from "viem";
+import { anvilChain, crowdfundContract } from "@/lib/contract";
 import { resolveIpfs } from "@/lib/utils";
-
-// 1. Define an interface for the full artifact if you want safety
-interface ContractArtifact {
-    abi: ContractInterface; // The ABI is the ContractInterface
-    [key: string]: any; // Allows for other fields like bytecode, etc.
-}
-// 2. Cast the import to the full artifact type
-const artifact = crowdfundAbiJson as ContractArtifact;
-
-// 3. Extract ONLY the 'abi' property
-const crowdfundAbi: ContractInterface = artifact.abi;
-
-// Replace with your deployed contract address & RPC URL
-const CONTRACT_ADDRESS = "0xC6bA8C3233eCF65B761049ef63466945c362EdD2";
-const RPC_URL = "http://127.0.0.1:8545";
-
+import PledgeCard from "@/app/components/UI/pledge-card";
+import { createPublicClient } from "viem";
 interface Campaign {
     owner: string;
     metadataURI: string;
@@ -33,86 +19,146 @@ interface Campaign {
     image?: string;
 }
 
+
+const publicClient = createPublicClient({
+    chain: anvilChain,
+    transport: http("http://127.0.0.1:8545"),
+});
 export default function CampaignPage() {
     const params = useParams();
     const ID = Array.isArray(params.ID) ? params.ID[0] : params.ID;
 
     const [campaign, setCampaign] = useState<Campaign | null>(null);
     const [loading, setLoading] = useState(true);
+    const [ethPrice, setEthPrice] = useState<number | null>(null);
+
+    const fetchEthPrice = async () => {
+        try {
+            const res = await fetch(
+                "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"
+            );
+            const data = await res.json();
+            setEthPrice(data.ethereum.usd);
+        } catch (err) {
+            console.error(err);
+            setEthPrice(null);
+        }
+    };
+
+    const fetchCampaign = async () => {
+        if (!ID) return;
+        try {
+            const client = createWalletClient({
+                chain: anvilChain,
+                transport: http("http://127.0.0.1:8545"),
+            });
+
+            const c = await publicClient.readContract({
+                address: crowdfundContract.address as `0x${string}`,
+                abi: crowdfundContract.abi as Abi,
+                functionName: "getCampaign",
+                args: [BigInt(ID)],
+                
+            }) as Campaign;
+
+            const metadataUrl = resolveIpfs(c.metadataURI);
+            const metadataRes = await fetch(metadataUrl);
+            const metadata = await metadataRes.json();
+
+            setCampaign({
+                owner: c.owner,
+                metadataURI: c.metadataURI,
+                title: metadata.title || "",
+                description: metadata.description || "",
+                image: metadata.image || "",
+                goal: c.goal.toString(),
+                pledged: c.pledged.toString(),
+                deadline: Number(c.deadline),
+                withdrawn: c.withdrawn,
+            });
+        } catch (err) {
+            console.error(err);
+            setCampaign(null);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handlePledge = async (amountEth: string) => {
+        try {
+            const walletClient = createWalletClient({
+                chain: anvilChain,
+                transport: http("http://127.0.0.1:8545"),
+            });
+
+            if (!window.ethereum) {
+                alert("Install MetaMask");
+                return;
+            }
+
+            const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+            const userAddress = accounts[0] as `0x${string}`;
+
+            await walletClient.writeContract({
+                account: userAddress,
+                address: crowdfundContract.address as `0x${string}`,
+                abi: crowdfundContract.abi as Abi,
+                functionName: "donate",
+                value: BigInt(parseFloat(amountEth) * 1e18),
+            });
+
+            alert(`Successfully pledged ${amountEth} ETH`);
+            fetchCampaign(); // refresh campaign data
+        } catch (err: any) {
+            console.error(err);
+            alert(`Pledge failed: ${err?.message || err}`);
+        }
+    };
 
     useEffect(() => {
-        const fetchCampaign = async () => {
-            if (!ID) return;
-
-            try {
-                const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
-
-                // Connect to contract with provider
-                const contract = new Contract(CONTRACT_ADDRESS, crowdfundAbi, provider);
-
-                // Call the getCampaign function from your updated contract
-                const c = await contract.getCampaign(BigInt(ID));
-
-                // Fetch metadata from URI
-                const metadataUrl = resolveIpfs(c.metadataURI);
-                console.log(c.metadataURI);
-                console.log(metadataUrl);
-                const metadataRes = await fetch(metadataUrl);
-                console.log(metadataRes);
-                const metadata = await metadataRes.json();
-
-                setCampaign({
-                    owner: c.owner,
-                    metadataURI: c.metadataURI,
-                    title: metadata.title || "",
-                    description: metadata.description || "",
-                    image: metadata.image || "",
-                    goal: c.goal.toString(),
-                    pledged: c.pledged.toString(),
-                    deadline: Number(c.deadline),
-                    withdrawn: c.withdrawn,
-                });
-            } catch (err) {
-                console.error("Error fetching campaign:", err);
-                setCampaign(null);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchCampaign();
+        fetchEthPrice();
+        const priceInterval = setInterval(fetchEthPrice, 60000);
+        return () => clearInterval(priceInterval);
     }, [ID]);
 
-    if (loading) return <div>Loading campaign...</div>;
-    if (!campaign) return <div>Campaign not found.</div>;
+    if (loading) return <div className="p-4">Loading...</div>;
+    if (!campaign) return <div className="p-4">Campaign not found.</div>;
 
     return (
-        <div className="p-4 max-w-xl mx-auto border rounded shadow">
-            <h1 className="text-2xl font-bold">{campaign.title}</h1>
-            {campaign.image && (
-                <img
-                    src={campaign.image}
-                    alt={campaign.title}
-                    className="my-2 rounded"
-                />
-            )}
-            <p>{campaign.description}</p>
-            <p>
-                <strong>Goal:</strong> {ethers.utils.formatEther(campaign.goal)} ETH
-            </p>
-            <p>
-                <strong>Pledged:</strong> {ethers.utils.formatEther(campaign.pledged)} ETH
-            </p>
-            <p>
-                <strong>Deadline:</strong>{" "}
-                {new Date(campaign.deadline * 1000).toLocaleString()}
-            </p>
-            <p>
-                <strong>Owner:</strong> {campaign.owner}
-            </p>
-            <p>
-                <strong>Withdrawn:</strong> {campaign.withdrawn ? "Yes" : "No"}
-            </p>
+        <div className="p-4 max-w-6xl mx-auto">
+            <div className="flex flex-col md:flex-row gap-6 md:items-stretch">
+                {/* Hero Image */}
+                <div className="flex-1 relative order-2 md:order-1 h-full">
+                    <h1 className="md:hidden text-3xl font-bold mb-4">{campaign.title}</h1>
+                    {campaign.image && (
+                        <div className="relative w-full h-full rounded-lg overflow-hidden">
+                            <img
+                                src={campaign.image}
+                                alt={campaign.title}
+                                className="w-full h-full object-cover rounded-lg"
+                            />
+                            <h1 className="hidden md:block absolute bottom-4 left-4 text-4xl font-bold text-white bg-black bg-opacity-50 px-3 py-1 rounded">
+                                {campaign.title}
+                            </h1>
+                        </div>
+                    )}
+                </div>
+
+                {/* Pledge Card */}
+                <div className="w-full md:w-96 flex-shrink-0 order-1 md:order-2 h-full">
+                   <PledgeCard />
+                </div>
+            </div>
+
+            {/* Campaign Details */}
+            <div className="mt-8 space-y-2 text-gray-700">
+                <h2 className="text-2xl font-bold mb-4">Campaign Story & Details</h2>
+                <p><strong>Owner:</strong> {campaign.owner}</p>
+                <p><strong>Withdrawn:</strong> {campaign.withdrawn ? "Yes" : "No"}</p>
+                <p><strong>Deadline:</strong> {new Date(campaign.deadline * 1000).toLocaleString()}</p>
+                <p>{campaign.description}</p>
+            </div>
         </div>
     );
 }
