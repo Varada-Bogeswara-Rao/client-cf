@@ -9,6 +9,7 @@ import PledgeCard from "@/app/components/UI/pledge-card";
 import { createPublicClient } from "viem";
 import { toast } from "sonner";
 import { WithdrawButton } from "@/app/components/withdraw";
+
 interface Campaign {
     owner: string;
     metadataURI: string;
@@ -25,6 +26,7 @@ const publicClient = createPublicClient({
     chain: anvilChain,
     transport: http("http://127.0.0.1:8545"),
 });
+
 export default function CampaignPage() {
     const params = useParams();
     const ID = Array.isArray(params.ID) ? params.ID[0] : params.ID;
@@ -49,17 +51,11 @@ export default function CampaignPage() {
     const fetchCampaign = async () => {
         if (!ID) return;
         try {
-            const client = createWalletClient({
-                chain: anvilChain,
-                transport: http("http://127.0.0.1:8545"),
-            });
-
             const c = await publicClient.readContract({
                 address: crowdfundContract.address as `0x${string}`,
                 abi: crowdfundContract.abi as Abi,
                 functionName: "getCampaign",
                 args: [BigInt(ID)],
-
             }) as Campaign;
 
             const metadataUrl = resolveIpfs(c.metadataURI);
@@ -100,8 +96,8 @@ export default function CampaignPage() {
             const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
             const userAddress = accounts[0] as `0x${string}`;
             if (!ID) return;
-            await walletClient.writeContract({
 
+            await walletClient.writeContract({
                 account: userAddress,
                 address: crowdfundContract.address as `0x${string}`,
                 abi: crowdfundContract.abi as Abi,
@@ -129,18 +125,21 @@ export default function CampaignPage() {
     if (!campaign) return <div className="p-4">Campaign not found.</div>;
 
     const currentAddress = window.ethereum?.selectedAddress?.toLowerCase();
+
     return (
         <div className="p-4 max-w-6xl mx-auto">
-            <div className="flex flex-col md:flex-row gap-6 md:items-stretch">
+            <div className="flex flex-col md:flex-row gap-6 md:items-start">
                 {/* Hero Image */}
-                <div className="flex-1 relative order-2 md:order-1 h-full">
+                <div className="flex-1 order-2 md:order-1">
                     <h1 className="md:hidden text-3xl font-bold mb-4">{campaign.title}</h1>
                     {campaign.image && (
-                        <div className="relative w-full h-full rounded-lg overflow-hidden">
+                        <div className="relative w-full rounded-lg overflow-hidden">
                             <img
                                 src={campaign.image}
                                 alt={campaign.title}
-                                className="w-full h-full object-cover rounded-lg"
+                                className="w-full h-auto object-contain rounded-lg"
+
+
                             />
                             <h1 className="hidden md:block absolute bottom-4 left-4 text-4xl font-bold text-white bg-black bg-opacity-50 px-3 py-1 rounded">
                                 {campaign.title}
@@ -150,7 +149,7 @@ export default function CampaignPage() {
                 </div>
 
                 {/* Pledge Card */}
-                <div className="w-full md:w-96 flex-shrink-0 order-1 md:order-2 h-full">
+                <div className="w-full md:w-96 flex-shrink-0 order-1 md:order-2">
                     {campaign && (
                         <PledgeCard
                             goal={BigInt(campaign.goal)}
@@ -160,10 +159,7 @@ export default function CampaignPage() {
                             onPledge={handlePledge}
                         />
                     )}
-                    {/* Withdraw Button (only visible to owner if not withdrawn) */}
-                    
                     {currentAddress === campaign.owner.toLowerCase() && !campaign.withdrawn && (
-                        
                         <WithdrawButton campaignId={BigInt(ID ?? "0")} />
                     )}
                 </div>
