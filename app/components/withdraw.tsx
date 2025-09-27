@@ -4,7 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { getWalletClient, crowdfundAbi } from "@/lib/contract";
 
-const CONTRACT_ADDRESS = "0x95bD8D42f30351685e96C62EDdc0d0613bf9a87A";
+const CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 
 export function WithdrawButton({ campaignId }: { campaignId: bigint }) {
     const [loading, setLoading] = useState(false);

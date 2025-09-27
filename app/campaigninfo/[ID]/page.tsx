@@ -7,6 +7,8 @@ import { anvilChain, crowdfundContract } from "@/lib/contract";
 import { resolveIpfs } from "@/lib/utils";
 import PledgeCard from "@/app/components/UI/pledge-card";
 import { createPublicClient } from "viem";
+import { toast } from "sonner";
+import { WithdrawButton } from "@/app/components/withdraw";
 interface Campaign {
     owner: string;
     metadataURI: string;
@@ -18,7 +20,6 @@ interface Campaign {
     withdrawn: boolean;
     image?: string;
 }
-
 
 const publicClient = createPublicClient({
     chain: anvilChain,
@@ -58,7 +59,7 @@ export default function CampaignPage() {
                 abi: crowdfundContract.abi as Abi,
                 functionName: "getCampaign",
                 args: [BigInt(ID)],
-                
+
             }) as Campaign;
 
             const metadataUrl = resolveIpfs(c.metadataURI);
@@ -92,26 +93,28 @@ export default function CampaignPage() {
             });
 
             if (!window.ethereum) {
-                alert("Install MetaMask");
+                toast("Install MetaMask");
                 return;
             }
 
             const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
             const userAddress = accounts[0] as `0x${string}`;
-
+            if (!ID) return;
             await walletClient.writeContract({
+
                 account: userAddress,
                 address: crowdfundContract.address as `0x${string}`,
                 abi: crowdfundContract.abi as Abi,
                 functionName: "donate",
+                args: [BigInt(ID)],
                 value: BigInt(parseFloat(amountEth) * 1e18),
             });
 
-            alert(`Successfully pledged ${amountEth} ETH`);
+            toast.success(`Successfully pledged ${amountEth} ETH`);
             fetchCampaign(); // refresh campaign data
         } catch (err: any) {
             console.error(err);
-            alert(`Pledge failed: ${err?.message || err}`);
+            toast.error(`Pledge failed: ${err?.message || err}`);
         }
     };
 
@@ -125,6 +128,7 @@ export default function CampaignPage() {
     if (loading) return <div className="p-4">Loading...</div>;
     if (!campaign) return <div className="p-4">Campaign not found.</div>;
 
+    const currentAddress = window.ethereum?.selectedAddress?.toLowerCase();
     return (
         <div className="p-4 max-w-6xl mx-auto">
             <div className="flex flex-col md:flex-row gap-6 md:items-stretch">
@@ -147,7 +151,21 @@ export default function CampaignPage() {
 
                 {/* Pledge Card */}
                 <div className="w-full md:w-96 flex-shrink-0 order-1 md:order-2 h-full">
-                   <PledgeCard />
+                    {campaign && (
+                        <PledgeCard
+                            goal={BigInt(campaign.goal)}
+                            pledged={BigInt(campaign.pledged)}
+                            deadline={campaign.deadline}
+                            ethPrice={ethPrice}
+                            onPledge={handlePledge}
+                        />
+                    )}
+                    {/* Withdraw Button (only visible to owner if not withdrawn) */}
+                    
+                    {currentAddress === campaign.owner.toLowerCase() && !campaign.withdrawn && (
+                        
+                        <WithdrawButton campaignId={BigInt(ID ?? "0")} />
+                    )}
                 </div>
             </div>
 

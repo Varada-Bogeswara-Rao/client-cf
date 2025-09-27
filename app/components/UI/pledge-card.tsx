@@ -1,124 +1,34 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import styled from "styled-components";
-import { useParams } from "next/navigation";
 import Countdown from "react-countdown";
-import { getWalletClient, crowdfundContract } from "@/lib/contract";
-import { parseEther, formatEther, Abi } from "viem";
-import { createPublicClient, http } from "viem";
-import { defineChain } from "viem";
-interface CampaignData {
+import { formatEther } from "viem";
+
+interface PledgeCardProps {
   goal: bigint;
   pledged: bigint;
   deadline: number;
+  ethPrice: number | null;
+  onPledge: (amountEth: string) => Promise<void>;
 }
-export const anvilChain = defineChain({
-  id: 31337,
-  name: "Anvil Local",
-  nativeCurrency: { name: "Ethereum", symbol: "ETH", decimals: 18 },
-  rpcUrls: { default: { http: ["http://127.0.0.1:8545"] } },
-});
-export const publicClient = createPublicClient({
-  chain: anvilChain,
-  transport: http("http://127.0.0.1:8545"),
-});
-const PledgeCard: React.FC = () => {
-  const [campaign, setCampaign] = useState<CampaignData | null>(null);
+
+const PledgeCard: React.FC<PledgeCardProps> = ({
+  goal,
+  pledged,
+  deadline,
+  ethPrice,
+  onPledge,
+}) => {
   const [ethAmount, setEthAmount] = useState("");
   const [loading, setLoading] = useState(false);
-  const [ethPrice, setEthPrice] = useState<number | null>(null);
 
-  const params = useParams();
-  const ID = Array.isArray(params.ID) ? params.ID[0] : params.ID;
-
-  // Fetch campaign data from the contract
-  useEffect(() => {
-    const fetchCampaign = async () => {
-      if (!ID) return;
-
-      const walletClient = getWalletClient();
-      if (!walletClient) return;
-
-      try {
-        const data: any = await publicClient.readContract({
-          address: crowdfundContract.address as `0x${string}`,
-          abi: crowdfundContract.abi as Abi,
-          functionName: "getCampaign",
-          args: [BigInt(ID)],
-        })
-        setCampaign({
-          goal: data.goal,
-          pledged: data.pledged,
-          deadline: Number(data.deadline),
-        });
-      } catch (err) {
-        console.error("Failed to fetch campaign:", err);
-      }
-    };
-
-    fetchCampaign();
-  }, [ID]);
-
-  // Optional: fetch ETH price in USD dynamically
-  useEffect(() => {
-    const fetchEthPrice = async () => {
-      try {
-        const res = await fetch(
-          "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"
-        );
-        const json = await res.json();
-        setEthPrice(json.ethereum.usd);
-      } catch (err) {
-        console.error("Failed to fetch ETH price:", err);
-      }
-    };
-    fetchEthPrice();
-  }, []);
-
-  const handlePledge = async () => {
-    if (!ethAmount || parseFloat(ethAmount) <= 0) return;
-    if (!ID) return;
-
-    try {
-      setLoading(true);
-
-      const walletClient = getWalletClient();
-      if (!walletClient) {
-        alert("Wallet not connected");
-        return;
-      }
-
-      const accounts = await window.ethereum.request({
-        method: "eth_requestAccounts",
-      });
-      const userAddress = accounts[0] as `0x${string}`;
-
-      await window.ethereum.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: "0x7a69" }], // 31337
-      });
-
-      await walletClient.writeContract({
-        account: userAddress,
-        address: crowdfundContract.address as `0x${string}`,
-        abi: crowdfundContract.abi as Abi,
-        functionName: "donate",
-        args: [BigInt(ID)],
-        value: parseEther(ethAmount),
-      });
-
-      alert(`Pledge of ${ethAmount} ETH submitted!`);
-      setEthAmount("");
-    } catch (err: any) {
-      console.error("Pledge failed:", err);
-      alert(`Pledge failed: ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (!campaign) return <div>Loading campaign...</div>;
+  const goalEth = formatEther(goal);
+  const pledgedEth = formatEther(pledged);
+  const progressPercent = Math.min(
+    (parseFloat(pledgedEth) / parseFloat(goalEth)) * 100,
+    100
+  );
 
   const usdValue =
     ethAmount && ethPrice
@@ -128,16 +38,20 @@ const PledgeCard: React.FC = () => {
       })
       : "0.00";
 
-  const goalEth = formatEther(campaign.goal);
-  const pledgedEth = formatEther(campaign.pledged);
-  const progressPercent = Math.min(
-    (parseFloat(pledgedEth) / parseFloat(goalEth)) * 100,
-    100
-  );
-
   const isInputValid = parseFloat(ethAmount) > 0;
-  const isCampaignActive = campaign.deadline * 1000 > Date.now();
+  const isCampaignActive = deadline * 1000 > Date.now();
   const isButtonDisabled = !isInputValid || !isCampaignActive || loading;
+
+  const handleSubmit = async () => {
+    if (!isInputValid) return;
+    try {
+      setLoading(true);
+      await onPledge(ethAmount);
+      setEthAmount(""); // reset after success
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const countdownRenderer = ({
     days,
@@ -174,7 +88,7 @@ const PledgeCard: React.FC = () => {
 
         <button
           className="pledge-btn"
-          onClick={handlePledge}
+          onClick={handleSubmit}
           disabled={isButtonDisabled}
         >
           {loading ? "Processing..." : "PLEDGE NOW"}
@@ -201,15 +115,13 @@ const PledgeCard: React.FC = () => {
           <p className="progress-text">{progressPercent.toFixed(1)}% Funded</p>
         </div>
 
-        <Countdown date={campaign.deadline * 1000} renderer={countdownRenderer} />
+        <Countdown date={deadline * 1000} renderer={countdownRenderer} />
       </div>
     </CardWrapper>
   );
 };
 
 const CardWrapper = styled.div`
-
-
   height: 100%;
   display: flex;
   flex-direction: column;

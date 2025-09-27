@@ -51,7 +51,7 @@ export default function CreateForm() {
 
   const onSubmit = async (values: CreateCampaignFormValues) => {
     if (!account) {
-      console.log("Wallet not connected, toast should appear.");
+      
       toast.error("Please connect your wallet first");
       return;
     }
@@ -69,9 +69,6 @@ export default function CreateForm() {
       const metadataURI = await uploadCampaignMetadata(metadata);
       console.log(metadataURI);
 
-      toast.success("Campaign metadata uploaded!", {
-        description: metadataURI,
-      });
 
       // Convert duration to seconds and goal to wei
       const durationSeconds = BigInt(values.duration * 86400);
@@ -92,10 +89,7 @@ export default function CreateForm() {
         account,
       });
 
-      toast("Transaction submitted!", {
-        description: `Tx hash: ${transactionHash}`,
-      });
-
+     
       // Wait for confirmation
       // const receipt = await crowdfundContract.contractWrapper.readContract.provider.waitForTransaction(transactionHash);
       // need to ad reciept to get the blocknumber(reciept.blocknumber)
