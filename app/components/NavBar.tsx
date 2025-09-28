@@ -18,7 +18,7 @@ export default function NavBar() {
                 <Link href="/campaigns" className="hover:text-blue-600 dark:hover:text-blue-400">
                     Campaigns
                 </Link>
-                {/* <ThemeToggleButton3 /> */}
+                <ThemeToggleButton3 />
             </div>
             <div className="flex items-center gap-3">
                 <ConnectButton client={client} />

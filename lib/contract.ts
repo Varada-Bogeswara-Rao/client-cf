@@ -42,7 +42,7 @@ export const crowdfundContract = getContract({
     name: "Anvil Local",
     rpc: "http://127.0.0.1:8545",
   }, // you can change to Sepolia/Goerli later
-  address: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+  address: "0x8464135c8F25Da09e49BC8782676a84730C318bC",
   abi: crowdfundAbi,
 });
 
