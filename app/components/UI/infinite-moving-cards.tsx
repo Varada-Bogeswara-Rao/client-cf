@@ -11,9 +11,10 @@ export const InfiniteMovingCards = ({
     className,
 }: {
     items: {
-        quote: string;
-        name: string;
         title: string;
+        pledged: string;
+        donation: string;
+        date: string;
         image?: string;
     }[];
     direction?: "left" | "right";
@@ -24,104 +25,102 @@ export const InfiniteMovingCards = ({
     const containerRef = React.useRef<HTMLDivElement>(null);
     const scrollerRef = React.useRef<HTMLUListElement>(null);
 
-    useEffect(() => {
-        addAnimation();
-    }, []);
     const [start, setStart] = useState(false);
-    function addAnimation() {
+
+    useEffect(() => {
         if (containerRef.current && scrollerRef.current) {
             const scrollerContent = Array.from(scrollerRef.current.children);
 
             scrollerContent.forEach((item) => {
                 const duplicatedItem = item.cloneNode(true);
-                if (scrollerRef.current) {
-                    scrollerRef.current.appendChild(duplicatedItem);
-                }
+                scrollerRef.current?.appendChild(duplicatedItem);
             });
 
             getDirection();
             getSpeed();
             setStart(true);
         }
-    }
+    }, []);
+
     const getDirection = () => {
         if (containerRef.current) {
-            if (direction === "left") {
-                containerRef.current.style.setProperty(
-                    "--animation-direction",
-                    "forwards",
-                );
-            } else {
-                containerRef.current.style.setProperty(
-                    "--animation-direction",
-                    "reverse",
-                );
-            }
+            containerRef.current.style.setProperty(
+                "--animation-direction",
+                direction === "left" ? "forwards" : "reverse"
+            );
         }
     };
+
     const getSpeed = () => {
         if (containerRef.current) {
-            if (speed === "fast") {
-                containerRef.current.style.setProperty("--animation-duration", "20s");
-            } else if (speed === "normal") {
-                containerRef.current.style.setProperty("--animation-duration", "40s");
-            } else {
-                containerRef.current.style.setProperty("--animation-duration", "80s");
-            }
+            const duration =
+                speed === "fast" ? "20s" : speed === "normal" ? "40s" : "80s";
+            containerRef.current.style.setProperty("--animation-duration", duration);
         }
     };
+
     return (
         <div
             ref={containerRef}
             className={cn(
-                "scroller relative z-20 max-w-7xl overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_20%,white_80%,transparent)]",
-                className,
+                "scroller relative z-20 max-w-7xl overflow-hidden", // removed mask
+                className
             )}
         >
             <ul
                 ref={scrollerRef}
                 className={cn(
-                    "flex w-max min-w-full shrink-0 flex-nowrap gap-4 py-4",
-                    start && "animate-scroll",
-                    pauseOnHover && "hover:[animation-play-state:paused]",
+                    "flex w-max min-w-full shrink-0 flex-nowrap gap-6 py-6",
+                    start && "animate-scroll"
                 )}
             >
                 {items.map((item, idx) => (
                     <li
-                        className="relative w-[350px] max-w-full shrink-0 rounded-2xl border border-b-0 border-zinc-200 bg-[linear-gradient(180deg,#fafafa,#f5f5f5)] px-8 py-6 md:w-[450px] dark:border-zinc-700 dark:bg-[linear-gradient(180deg,#27272a,#18181b)]"
-                        key={item.name}
+                        key={idx}
+                        className="relative w-[350px] max-w-full shrink-0 rounded-2xl border border-zinc-200 
+              bg-transparent from-zinc-50 to-zinc-100 dark:from-zinc-800 dark:to-zinc-900 
+              dark:border-zinc-700 overflow-hidden shadow-md 
+              hover:shadow-[0_0_25px_rgba(0,200,255,0.6)] transition-shadow duration-300"
                     >
-                        <blockquote>
-                            <div
-                                aria-hidden="true"
-                                className="user-select-none pointer-events-none absolute -top-0.5 -left-0.5 -z-1 h-[calc(100%_+_4px)] w-[calc(100%_+_4px)]"
-                            ></div>
-                            <span className="relative z-20 text-sm leading-[1.6] font-normal text-neutral-800 dark:text-gray-100">
-                                {item.quote}
-                            </span>
-                            <div className="relative z-20 mt-6 flex flex-row items-center gap-3">
-                                {/* Image if provided */}
-                                {item.image && (
-                                    <img
-                                        src={item.image}
-                                        alt={item.name}
-                                        className="h-10 w-10 rounded-full object-cover border border-gray-300 dark:border-gray-700"
-                                    />
-                                )}</div>
-                                <div className="relative z-20 mt-6 flex flex-row items-center">
-                                    <span className="flex flex-col gap-1">
-                                        <span className="text-sm leading-[1.6] font-normal text-neutral-500 dark:text-gray-400">
-                                            {item.name}
-                                        </span>
-                                        <span className="text-sm leading-[1.6] font-normal text-neutral-500 dark:text-gray-400">
-                                            {item.title}
-                                        </span>
-                                    </span>
-                                </div>
-                        </blockquote>
+                        {/* Big image at top */}
+                        {item.image && (
+                            <div className="h-40 w-full overflow-hidden">
+                                <img
+                                    src={item.image}
+                                    alt={item.title}
+                                    className="h-full w-full object-cover"
+                                />
+                            </div>
+                        )}
+
+                        {/* Campaign details */}
+                        <div className="p-5 space-y-3">
+                            <h3 className="  text -lg font-semibold">
+                                {item.title}
+                            </h3>
+                            <p className="text-sm">
+                                <span className="font-medium">Pledged:</span> {item.pledged}
+                            </p>
+                            <p className="text-sm ">
+                                <span className="font-medium">Donation Received:</span>{" "}
+                                {item.donation}
+                            </p>
+                            <p className="text-sm">
+                                <span className="font-medium">Date:</span> {item.date}
+                            </p>
+                        </div>
                     </li>
                 ))}
             </ul>
+
+            {/* Pause scroll on hover */}
+            {pauseOnHover && (
+                <style jsx>{`
+          .scroller:hover .animate-scroll {
+            animation-play-state: paused !important;
+          }
+        `}</style>
+            )}
         </div>
     );
 };
