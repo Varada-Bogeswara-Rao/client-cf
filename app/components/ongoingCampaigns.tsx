@@ -64,7 +64,7 @@ export default function OngoingCampaigns() {
                         });
                     }
 
-
+// ..
                     // Only ongoing campaigns
                     if (!withdrawn && Number(deadline) > now) {
                         all.push({
